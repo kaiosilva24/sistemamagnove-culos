@@ -82,10 +82,22 @@ module.exports = async function handler(req, res) {
 
     console.log('✅ Veículo salvo:', veiculo);
 
+    // Salvar log da ação
+    await supabase.from('agent_logs').insert([{
+      user_id: user.id,
+      session_id: sessionId || Date.now().toString(),
+      command: command,
+      response: `Veículo ${veiculoData.marca} ${veiculoData.modelo} ${veiculoData.ano} cadastrado com sucesso!`,
+      ai_used: 'local',
+      confidence: 0.95
+    }]);
+
     return res.status(200).json({
       success: true,
-      action: 'vehicle_added',
+      action: 'create_vehicle',
+      vehicleId: veiculo.id,
       aiUsed: 'local',
+      processedBy: 'local',
       response: `Veículo ${veiculoData.marca} ${veiculoData.modelo} ${veiculoData.ano} cadastrado com sucesso!`,
       confidence: 0.95,
       sessionId: sessionId || Date.now().toString(),
