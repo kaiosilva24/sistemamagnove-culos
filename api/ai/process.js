@@ -197,7 +197,8 @@ module.exports = async function handler(req, res) {
     const anoMatch = command.match(/ano\s+(\d{4})/i);
     const valorMatch = command.match(/valor\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i) || 
                        command.match(/(?:por|de)\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i);
-    const placaMatch = command.match(/placa\s+([\w\d\-]+)/i);
+    // Placa: aceita "ABC1234", "ABC-1234", "ABC 1234"
+    const placaMatch = command.match(/placa\s+([\w\d\-\s]+?)(?:\s+km|\s+valor|\s+cor|\s+ano|$)/i);
     const kmMatch = command.match(/(?:km|quilometragem|quilômetros?)\s+(\d+(?:\.\d{3})*)/i);
     const corMatch = command.match(/cor\s+(\w+)/i);
 
