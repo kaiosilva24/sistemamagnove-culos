@@ -1,5 +1,5 @@
 // Status das IAs disponíveis
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,4 +23,4 @@ export default function handler(req, res) {
     local: true, // Sempre disponível
     available: hasGemini || hasGroq ? ['gemini', 'groq', 'local'] : ['local']
   });
-}
+};

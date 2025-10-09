@@ -1,5 +1,5 @@
 // Cliente Supabase para API serverless
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -8,10 +8,10 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('❌ SUPABASE_URL ou SUPABASE_KEY não configuradas');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 // Função para verificar autenticação do usuário
-export async function getUserFromRequest(req) {
+async function getUserFromRequest(req) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -35,7 +35,7 @@ export async function getUserFromRequest(req) {
 }
 
 // Middleware para requisições autenticadas
-export async function requireAuth(req, res, handler) {
+async function requireAuth(req, res, handler) {
   const user = await getUserFromRequest(req);
   
   if (!user) {
@@ -45,3 +45,5 @@ export async function requireAuth(req, res, handler) {
   req.user = user;
   return handler(req, res);
 }
+
+module.exports = { supabase, getUserFromRequest, requireAuth };

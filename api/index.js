@@ -1,6 +1,6 @@
 // API serverless principal para Vercel
 // Este arquivo redireciona para as rotas específicas
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   res.status(200).json({ 
     message: 'API MAGNO rodando no Vercel',
     version: '2.0',
@@ -13,4 +13,4 @@ export default function handler(req, res) {
       '/api/preferences'
     ]
   });
-}
+};

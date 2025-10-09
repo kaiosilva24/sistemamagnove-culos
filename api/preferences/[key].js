@@ -1,6 +1,6 @@
-import { supabase, requireAuth } from '../_lib/supabase.js';
+const { supabase, requireAuth } = require('../_lib/supabase');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -38,4 +38,4 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: error.message });
     }
   });
-}
+};
