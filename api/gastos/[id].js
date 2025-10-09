@@ -12,6 +12,7 @@ module.exports = async function handler(req, res) {
   }
 
   const { id } = req.query;
+  console.log('🗑️ Deletar gasto - ID:', id, 'Method:', req.method);
 
   // DELETE - Deletar gasto
   if (req.method === 'DELETE') {
