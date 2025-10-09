@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit2, Trash2, Plus, DollarSign, Calendar, Wrench } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 function DetalhesVeiculo() {
   const { id } = useParams();
@@ -20,7 +21,12 @@ function DetalhesVeiculo() {
 
   const fetchVeiculo = async () => {
     try {
-      const response = await fetch(`/api/veiculos/${id}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/veiculos/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
       const data = await response.json();
       setVeiculo(data);
     } catch (error) {
@@ -32,7 +38,12 @@ function DetalhesVeiculo() {
 
   const fetchGastos = async () => {
     try {
-      const response = await fetch(`/api/veiculos/${id}/gastos`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/veiculos/${id}/gastos`, {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
       const data = await response.json();
       // A API agora retorna {gastos: [], total: 0}
       setGastos(data.gastos || []);
