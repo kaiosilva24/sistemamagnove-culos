@@ -45,16 +45,16 @@ module.exports = async function handler(req, res) {
       console.log('💰 Comando de gasto detectado');
 
       // Buscar placa primeiro (aceita espaços: "abcd 1010")
-      // Estratégia melhorada: pega tudo após "placa" até encontrar um padrão de gasto
-      // Padrão de gasto: palavra + número (ex: "motor 80", "correia dentada 80")
-      let placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+(?:[\p{L}\s]+\s+)?\d{2,})/iu);
+      // ESTRATÉGIA: Capturar até encontrar palavra que indica início de gastos (r$, correia, motor, etc)
+      // Aceita placas com espaços: "abcd 10 10", "abc 1234", etc
+      let placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+(?:correia|motor|roda|pneu|óleo|filtro|pastilha|disco|amortecedor|suspensão|cambio|câmbio|embreagem|bateria|farol|lanterna|retrovisor|para-choque|capô|porta|vidro|pintura|lataria|funilaria|ar\s+condicionado|radiador|bomba|vela|corrente|correia\s+dentada|kit\s+embreagem|troca\s+de\s+óleo|alinhamento|balanceamento|geometria|revisão|manutenção|serviço|reparo|conserto|r\$))/iu);
       
-      // Fallback 1: pega até encontrar qualquer sequência que termine com número
+      // Fallback 1: Se não encontrar palavras-chave, pega até encontrar LETRA + R$ ou LETRA + NÚMERO alto (indicando valor)
       if (!placaMatch) {
-        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+[\p{L}]+.*?\d+)/iu);
+        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+[\p{L}]+\s+r?\$?\s*\d{2,})/iu);
       }
       
-      // Fallback 2: pega tudo até o final do comando
+      // Fallback 2: pega tudo até o final do comando (caso não tenha gastos)
       if (!placaMatch) {
         placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)$/i);
       }
