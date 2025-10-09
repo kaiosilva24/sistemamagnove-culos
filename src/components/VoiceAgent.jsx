@@ -217,6 +217,15 @@ const VoiceAgent = () => {
         }, 2000);
       }
 
+      // Se foram adicionados gastos com sucesso, recarrega a página atual
+      if (result.action === 'add_gastos' && result.gastoIds) {
+        console.log('✅ Gastos adicionados, IDs:', result.gastoIds);
+        setTimeout(() => {
+          // Recarrega os dados da página atual
+          window.location.reload();
+        }, 2000);
+      }
+
     } catch (error) {
       console.error('❌ Erro detalhado:', error);
       console.error('Stack:', error.stack);
