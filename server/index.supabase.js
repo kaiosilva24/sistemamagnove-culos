@@ -5,9 +5,19 @@ import hybridAI from './hybridAI.js';
 import { authenticateUser, optionalAuth } from './authMiddleware.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Configuração CORS para aceitar requisições do Vercel
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, /\.vercel\.app$/] 
+    : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // ========== ROTAS DE VEÍCULOS ==========
@@ -325,8 +335,18 @@ app.get('/api/agent/logs/:sessionId', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'API funcionando',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor rodando em http://0.0.0.0:${PORT}`);
+  console.log(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`☁️  Usando Supabase (PostgreSQL na nuvem)`);
   console.log(`🧠 Sistema Híbrido de IA ativado!`);
   const status = hybridAI.getStatus();
