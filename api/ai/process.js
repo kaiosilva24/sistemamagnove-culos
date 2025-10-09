@@ -32,13 +32,14 @@ module.exports = async function handler(req, res) {
     }
 
     // Detectar tipo de comando
-    // Gasto: "adicionar gasto", "gasto na placa", "gastei", "largar gasto", etc
-    // Se tiver "placa [XXX]" + valores numéricos, provavelmente é gasto
-    const hasPlacaAndValues = /placa\s+[\w\d\s]+.*\d{2,}/i.test(command);
-    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+(na|no|a|ao)\s+placa|largas?s?e|coloca.*gasto/i.test(command) 
-                           || hasPlacaAndValues;
-    const isVeiculoCommand = /adicionar\s+veículo|veículo\s+marca|cadastrar\s+veículo/i.test(command) || 
-                             /marca\s+\w+\s+modelo/i.test(command);
+    // PRIORIDADE 1: Detectar CADASTRO de veículo (antes de gasto!)
+    const isCadastroCommand = /cadastr(ar|a|o)|adicionar\s+(novo\s+)?ve[ií]culo|novo\s+ve[ií]culo|registrar\s+ve[ií]culo|criar\s+ve[ií]culo/i.test(command) ||
+                              /\b(marca|modelo)\s+\w+/i.test(command);
+    
+    // PRIORIDADE 2: Detectar GASTO (apenas se NÃO for cadastro)
+    const isGastoExplicito = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+(na|no|a|ao)\s+placa|largas?s?e|coloca.*gasto/i.test(command);
+    const isGastoCommand = !isCadastroCommand && isGastoExplicito;
+    const isVeiculoCommand = isCadastroCommand;
 
     // ==================== PROCESSAR GASTOS ====================
     if (isGastoCommand) {
