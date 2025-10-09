@@ -34,6 +34,10 @@ async function getAuthToken() {
 async function authenticatedFetch(url, options = {}) {
   const token = await getAuthToken();
   
+  // DEBUG: Sempre exibir no console
+  window.DEBUG_TOKEN = token ? token.substring(0, 30) + '...' : 'NULL';
+  window.DEBUG_URL = url;
+  
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -41,15 +45,22 @@ async function authenticatedFetch(url, options = {}) {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-    console.log('🔑 Enviando requisição autenticada para:', url);
+    alert('🔑 Token sendo enviado! Veja console: window.DEBUG_TOKEN');
+    console.log('🔑 ENVIANDO TOKEN:', token.substring(0, 50));
+    console.log('🔑 Para URL:', url);
+    console.log('🔑 Headers:', headers);
   } else {
-    console.warn('⚠️ Requisição SEM token para:', url);
+    alert('❌ SEM TOKEN! Veja console.');
+    console.error('❌ NENHUM TOKEN ENCONTRADO!');
+    console.error('❌ URL:', url);
   }
 
   const response = await fetch(url, {
     ...options,
     headers,
   });
+
+  console.log('📡 Response status:', response.status);
 
   if (!response.ok) {
     console.error('❌ Erro na requisição:', response.status, url);
