@@ -45,9 +45,17 @@ module.exports = async function handler(req, res) {
       console.log('💰 Comando de gasto detectado');
 
       // Buscar placa primeiro (aceita espaços: "abcd 1010")
-      // Regex genérico: captura até encontrar uma palavra seguida de número (que seria o tipo de gasto)
-      const placaMatch = command.match(/placa\s+(?:do\s+veículo\s+)?([\w\d\s\-]+?)(?:\s+\w+\s+\d+|$)/i);
+      // Estratégia: pega tudo após "placa" até encontrar uma letra seguida de número (gasto)
+      let placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+[a-záàâãéèêíïóôõöúçñ]+\s+\d|$)/i);
+      
+      // Fallback: se não encontrou, tenta pegar até o primeiro número de 3+ dígitos
+      if (!placaMatch) {
+        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+\d{3,}|$)/i);
+      }
+      
       const modeloMatch = command.match(/veículo\s+(\w+)(?:\s+placa)?/i);
+      
+      console.log('🔍 Regex de placa encontrou:', placaMatch ? placaMatch[1] : 'NADA');
 
       // Buscar veículo
       let veiculo = null;
