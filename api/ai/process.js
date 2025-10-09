@@ -45,12 +45,18 @@ module.exports = async function handler(req, res) {
       console.log('💰 Comando de gasto detectado');
 
       // Buscar placa primeiro (aceita espaços: "abcd 1010")
-      // Estratégia: pega tudo após "placa" até encontrar uma letra seguida de número (gasto)
-      let placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+[a-záàâãéèêíïóôõöúçñ]+\s+\d|$)/i);
+      // Estratégia melhorada: pega tudo após "placa" até encontrar um padrão de gasto
+      // Padrão de gasto: palavra + número (ex: "motor 80", "correia dentada 80")
+      let placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+(?:[\p{L}\s]+\s+)?\d{2,})/iu);
       
-      // Fallback: se não encontrou, tenta pegar até o primeiro número de 3+ dígitos
+      // Fallback 1: pega até encontrar qualquer sequência que termine com número
       if (!placaMatch) {
-        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+\d{3,}|$)/i);
+        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)(?=\s+[\p{L}]+.*?\d+)/iu);
+      }
+      
+      // Fallback 2: pega tudo até o final do comando
+      if (!placaMatch) {
+        placaMatch = command.match(/(?:placa|na placa|a placa)\s+([\w\d\s\-]+?)$/i);
       }
       
       const modeloMatch = command.match(/veículo\s+(\w+)(?:\s+placa)?/i);
@@ -114,43 +120,49 @@ module.exports = async function handler(req, res) {
       // Aceita QUALQUER tipo de gasto, não apenas uma lista pré-definida
       const gastos = [];
       
+      // Remover a parte da placa do comando para não interferir na extração de gastos
+      let comandoSemPlaca = command;
+      if (placaMatch) {
+        // Remove "placa XXXX" completamente do comando
+        // Escape special regex chars e permite espaços/hífens flexíveis
+        const placaEscapada = placaMatch[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[\s-]+/g, '[\\s-]+');
+        const placaRegex = new RegExp(`(?:(?:na|a)\\s+)?placa\\s+${placaEscapada}(?:\\s+|$)`, 'i');
+        comandoSemPlaca = command.replace(placaRegex, '').trim();
+        console.log('📝 Comando sem placa:', comandoSemPlaca);
+      }
+      
       // Palavras que NÃO são tipos de gastos (palavras de comando)
       const palavrasIgnoradas = ['adicionar', 'gasto', 'gastos', 'placa', 'veiculo', 'veículo', 
                                   'do', 'da', 'de', 'no', 'na', 'para', 'em', 'ok', 'ao', 'com', 'a', 'r'];
       
       // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200", "transmissão r$ 1500")
       // Usa Unicode \p{L} para capturar qualquer letra (incluindo acentuadas)
-      const pattern1 = /([\p{L}]+(?:-[\p{L}]+)?)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/giu;
+      const pattern1 = /([\p{L}\s]+?)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/giu;
       let match;
-      while ((match = pattern1.exec(command)) !== null) {
-        const tipo = match[1].toLowerCase();
+      while ((match = pattern1.exec(comandoSemPlaca)) !== null) {
+        const tipo = match[1].trim().toLowerCase();
         if (!palavrasIgnoradas.includes(tipo)) {
           gastos.push({
-            tipo: match[1],
+            tipo: match[1].trim(),
             valor: parseFloat(match[2].replace(/\./g, '').replace(',', '.'))
           });
         }
       }
 
-      // Padrão 2: [TIPO] [VALOR] SEM r$ (ex: "motor 200 câmbio 300 roda 800 volante 150")
-      // Captura QUALQUER palavra seguida de número (2+ dígitos para pegar valores menores)
-      const pattern2 = /([\p{L}]+(?:-[\p{L}]+)?)\s+(\d{2,})/giu;
-      while ((match = pattern2.exec(command)) !== null) {
-        const tipo = match[1].toLowerCase();
+      // Padrão 2: [TIPO] [VALOR] SEM r$ (ex: "motor 200 câmbio 300 correia dentada 80")
+      // Captura palavras (incluindo multi-word) seguidas de número
+      const pattern2 = /([\p{L}\s]+?)\s+(\d{2,})/giu;
+      while ((match = pattern2.exec(comandoSemPlaca)) !== null) {
+        const tipo = match[1].trim().toLowerCase();
         const valor = parseInt(match[2]);
-        const posicao = match.index;
         
-        // Verificar se está IMEDIATAMENTE após "placa" (nas últimas 15 posições)
-        const textoAntes = command.substring(Math.max(0, posicao - 15), posicao);
-        const logoAposPlaca = /placa\s+[\w\d]{0,6}$/i.test(textoAntes);
-        
-        // Ignorar palavras de comando, valores muito grandes ou se está imediatamente após "placa"
-        if (!palavrasIgnoradas.includes(tipo) && valor >= 10 && valor <= 99999 && !logoAposPlaca) {
+        // Ignorar palavras de comando e valores muito grandes
+        if (!palavrasIgnoradas.includes(tipo) && valor >= 10 && valor <= 99999) {
           // Evitar duplicatas
           const jaExiste = gastos.some(g => g.tipo.toLowerCase() === tipo);
           if (!jaExiste) {
             gastos.push({
-              tipo: match[1],
+              tipo: match[1].trim(),
               valor: parseFloat(match[2])
             });
           }
@@ -158,15 +170,15 @@ module.exports = async function handler(req, res) {
       }
 
       // Padrão 3: [VALOR] em [TIPO] (ex: "200 em câmbio", "500 na turbina")
-      const pattern3 = /(\d+)\s+(?:em|para|no|na)\s+([\p{L}]+(?:-[\p{L}]+)?)/giu;
-      while ((match = pattern3.exec(command)) !== null) {
-        const tipo = match[2].toLowerCase();
+      const pattern3 = /(\d+)\s+(?:em|para|no|na)\s+([\p{L}\s]+?)(?=\s+\d|\s+r\$|$)/giu;
+      while ((match = pattern3.exec(comandoSemPlaca)) !== null) {
+        const tipo = match[2].trim().toLowerCase();
         if (!palavrasIgnoradas.includes(tipo)) {
           // Evitar duplicatas
           const jaExiste = gastos.some(g => g.tipo.toLowerCase() === tipo);
           if (!jaExiste) {
             gastos.push({
-              tipo: match[2],
+              tipo: match[2].trim(),
               valor: parseFloat(match[1])
             });
           }
