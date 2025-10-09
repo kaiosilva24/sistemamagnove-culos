@@ -40,23 +40,10 @@ module.exports = async function handler(req, res) {
     if (isGastoCommand) {
       console.log('💰 Comando de gasto detectado');
 
-      // Extrair informações do gasto
-      const valorMatch = command.match(/(?:gasto\s+de|valor\s+de|valor)\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i) ||
-                         command.match(/(\d+(?:\.\d{3})*(?:,\d{2})?)\s+(?:reais|real)/i);
-      const tipoMatch = command.match(/em\s+(\w+)/i) || command.match(/tipo\s+(\w+)/i);
+      // Buscar placa primeiro
       const placaMatch = command.match(/placa\s+([\w\d]+)/i) || 
                          command.match(/veículo\s+(?:\w+\s+)?placa\s+([\w\d]+)/i);
       const modeloMatch = command.match(/veículo\s+(\w+)(?:\s+placa)?/i);
-      const descricaoMatch = command.match(/(?:descrição|obs|observação):\s*([^,\.]+)/i);
-
-      if (!valorMatch) {
-        return res.status(200).json({
-          success: false,
-          action: 'error',
-          response: 'Não consegui identificar o valor do gasto. Fale: "Adicionar gasto de [VALOR] em [TIPO] no veículo placa [PLACA]"',
-          confidence: 0.3
-        });
-      }
 
       // Buscar veículo
       let veiculo = null;
@@ -88,37 +75,79 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Preparar dados do gasto
-      const gastoData = {
+      // NOVO: Extrair MÚLTIPLOS gastos do comando
+      // Padrão: "câmbio r$ 200 documentação r$ 1000" ou "gasto de 200 em câmbio e 1000 em documentação"
+      const gastos = [];
+      
+      // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200 documentação r$ 1000")
+      const pattern1 = /(\w+)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/gi;
+      let match;
+      while ((match = pattern1.exec(command)) !== null) {
+        gastos.push({
+          tipo: match[1],
+          valor: parseFloat(match[2].replace(/\./g, '').replace(',', '.'))
+        });
+      }
+
+      // Padrão 2: gasto de [VALOR] em [TIPO] (ex: "gasto de 200 em câmbio")
+      if (gastos.length === 0) {
+        const pattern2 = /(?:gasto\s+de|valor\s+de)?\s*(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)\s+(?:reais?\s+)?(?:em|para|no|na)?\s*(\w+)/gi;
+        while ((match = pattern2.exec(command)) !== null) {
+          gastos.push({
+            tipo: match[2],
+            valor: parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
+          });
+        }
+      }
+
+      if (gastos.length === 0) {
+        return res.status(200).json({
+          success: false,
+          action: 'error',
+          response: 'Não consegui identificar os gastos. Fale: "Adicionar gasto placa [PLACA] [TIPO] r$ [VALOR]" ou "placa [PLACA] câmbio r$ 200 documentação r$ 1000"',
+          confidence: 0.3
+        });
+      }
+
+      console.log('💾 Salvando', gastos.length, 'gasto(s):', gastos);
+
+      // Salvar todos os gastos
+      const gastosData = gastos.map(g => ({
         vehicle_id: veiculo.id,
-        tipo: tipoMatch ? tipoMatch[1] : 'Diversos',
-        valor: parseFloat(valorMatch[1].replace(/\./g, '').replace(',', '.')),
-        descricao: descricaoMatch ? descricaoMatch[1] : `Gasto registrado por voz`,
+        tipo: g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1),
+        valor: g.valor,
+        descricao: `Gasto registrado por voz`,
         data: new Date().toISOString().split('T')[0]
-      };
+      }));
 
-      console.log('💾 Salvando gasto:', gastoData);
-
-      // Salvar gasto
-      const { data: gasto, error: gastoError } = await supabase
+      const { data: gastosSalvos, error: gastoError } = await supabase
         .from('gastos')
-        .insert([gastoData])
-        .select()
-        .single();
+        .insert(gastosData)
+        .select();
 
       if (gastoError) {
-        console.error('❌ Erro ao salvar gasto:', gastoError);
+        console.error('❌ Erro ao salvar gastos:', gastoError);
         throw gastoError;
       }
 
-      console.log('✅ Gasto salvo:', gasto);
+      console.log('✅', gastosSalvos.length, 'gasto(s) salvo(s)');
+
+      // Calcular total
+      const totalGastos = gastos.reduce((sum, g) => sum + g.valor, 0);
+      const listaGastos = gastos.map(g => `${g.tipo} (R$ ${g.valor.toFixed(2)})`).join(', ');
 
       // Salvar log
       await supabase.from('agent_logs').insert([{
         user_id: user.id,
         session_id: sessionId || Date.now().toString(),
         command: command,
-        response: `Gasto de R$ ${gastoData.valor.toFixed(2)} em ${gastoData.tipo} registrado no veículo ${veiculo.modelo}`,
+        action: 'add_gastos',
+        data: {
+          placa: veiculo.placa,
+          modelo: veiculo.modelo,
+          gastos: gastos
+        },
+        response: `${gastos.length} gasto(s) registrado(s): ${listaGastos}. Total: R$ ${totalGastos.toFixed(2)}`,
         ai_used: 'local',
         confidence: 0.95
       }]);
@@ -126,15 +155,16 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({
         success: true,
         action: 'add_gastos',
-        gastoId: gasto.id,
+        gastoIds: gastosSalvos.map(g => g.id),
         aiUsed: 'local',
         processedBy: 'local',
-        response: `Gasto de R$ ${gastoData.valor.toFixed(2)} em ${gastoData.tipo} registrado no veículo ${veiculo.modelo} com sucesso!`,
+        response: `${gastos.length} gasto(s) registrado(s) no veículo ${veiculo.modelo}: ${listaGastos}. Total: R$ ${totalGastos.toFixed(2)}`,
         confidence: 0.95,
         sessionId: sessionId || Date.now().toString(),
         data: {
-          gasto: gasto,
-          vehicle: veiculo
+          gastos: gastosSalvos,
+          vehicle: veiculo,
+          total: totalGastos
         }
       });
     }
