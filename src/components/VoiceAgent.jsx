@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Volume2, VolumeX, Brain, FileText } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { aiAPI } from '../lib/api';
 
 const VoiceAgent = () => {
   const navigate = useNavigate();
@@ -33,9 +34,8 @@ const VoiceAgent = () => {
 
   // Busca status das IAs disponíveis E carrega preferência salva
   useEffect(() => {
-    // Busca status das IAs
-    fetch('/api/ai/status')
-      .then(res => res.json())
+    // Busca status das IAs COM AUTENTICAÇÃO
+    aiAPI.getStatus()
       .then(data => {
         console.log('📊 Status completo da API:', JSON.stringify(data, null, 2));
         console.log('   Gemini:', data.available?.gemini);
@@ -45,7 +45,7 @@ const VoiceAgent = () => {
       })
       .catch(err => console.error('Erro ao buscar status de IAs:', err));
 
-    // Carrega preferência de IA salva
+    // Carrega preferência de IA salva (pode dar 401 se não estiver logado, é normal)
     fetch('/api/preferences/preferred_ai')
       .then(res => res.json())
       .then(data => {
@@ -54,7 +54,7 @@ const VoiceAgent = () => {
           setSelectedAI(data.value);
         }
       })
-      .catch(err => console.error('Erro ao carregar preferência de IA:', err));
+      .catch(err => console.log('⚠️ Preferência não carregada (normal se não estiver logado)'));
   }, []);
 
   // Salva preferência quando muda
@@ -154,29 +154,10 @@ const VoiceAgent = () => {
     console.log('🎤 Comando recebido:', command);
 
     try {
-      // Envia para o agente de IA processar
-      console.log('📡 Enviando para:', '/api/ai/process');
+      // Envia para o agente de IA processar COM AUTENTICAÇÃO
+      console.log('📡 Enviando comando com autenticação...');
       
-      const response = await fetch('/api/ai/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          command,
-          preferredAI: selectedAI 
-        })
-      });
-
-      console.log('📥 Status da resposta:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erro HTTP:', response.status, errorText);
-        throw new Error(`Erro ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = await aiAPI.processCommand(command, Date.now().toString(), selectedAI);
       console.log('🤖 Resposta da IA:', result);
       console.log('   📋 Ação:', result.action);
       console.log('   🧠 IA usada:', result.processedBy);
