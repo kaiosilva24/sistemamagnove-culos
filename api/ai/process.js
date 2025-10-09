@@ -33,10 +33,9 @@ module.exports = async function handler(req, res) {
 
     // Detectar tipo de comando
     // Gasto: "adicionar gasto", "gasto na placa", "gastei", "largar gasto", etc
-    // Se tiver "placa [XXX]" + valores numéricos + tipos de gasto, é gasto
-    const hasPlacaAndValues = /placa\s+\w+.*(câmbio|motor|pneu|documentação|pintura|mecânica|elétrica|manutenção|peça|serviço)/i.test(command) 
-                              && /\d{2,}/i.test(command);
-    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+na\s+placa|largas?s?e|coloca.*gasto/i.test(command) 
+    // Se tiver "placa [XXX]" + valores numéricos, provavelmente é gasto
+    const hasPlacaAndValues = /placa\s+[\w\d\s]+.*\d{2,}/i.test(command);
+    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+(na|no|a|ao)\s+placa|largas?s?e|coloca.*gasto/i.test(command) 
                            || hasPlacaAndValues;
     const isVeiculoCommand = /adicionar\s+veículo|veículo\s+marca|cadastrar\s+veículo/i.test(command) || 
                              /marca\s+\w+\s+modelo/i.test(command);
@@ -46,7 +45,8 @@ module.exports = async function handler(req, res) {
       console.log('💰 Comando de gasto detectado');
 
       // Buscar placa primeiro (aceita espaços: "abcd 1010")
-      const placaMatch = command.match(/placa\s+(?:do\s+veículo\s+)?([\w\d\s\-]+?)(?:\s+câmbio|\s+motor|\s+pneu|\s+roda|\s+documentação|\s+pintura|\s+mecânica|\s+elétrica|\s+manutenção|\s+peça|\s+serviço|$)/i);
+      // Regex genérico: captura até encontrar uma palavra seguida de número (que seria o tipo de gasto)
+      const placaMatch = command.match(/placa\s+(?:do\s+veículo\s+)?([\w\d\s\-]+?)(?:\s+\w+\s+\d+|$)/i);
       const modeloMatch = command.match(/veículo\s+(\w+)(?:\s+placa)?/i);
 
       // Buscar veículo
@@ -102,44 +102,66 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // NOVO: Extrair MÚLTIPLOS gastos do comando
-      // Padrão: "câmbio r$ 200 documentação r$ 1000" ou "motor 200 câmbio 300"
+      // NOVO: Extrair MÚLTIPLOS gastos do comando de forma GENÉRICA
+      // Aceita QUALQUER tipo de gasto, não apenas uma lista pré-definida
       const gastos = [];
-      const tiposValidos = ['câmbio', 'cambio', 'motor', 'pneu', 'pneus', 'documentação', 'documentacao', 
-                            'pintura', 'mecânica', 'mecanica', 'elétrica', 'eletrica', 'manutenção', 
-                            'manutencao', 'peça', 'peca', 'serviço', 'servico'];
       
-      // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200")
-      const pattern1 = /(\w+)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/gi;
+      // Palavras que NÃO são tipos de gastos (palavras de comando)
+      const palavrasIgnoradas = ['adicionar', 'gasto', 'gastos', 'placa', 'veiculo', 'veículo', 
+                                  'do', 'da', 'de', 'no', 'na', 'para', 'em', 'ok', 'ao', 'com', 'a', 'r'];
+      
+      // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200", "transmissão r$ 1500")
+      // Usa Unicode \p{L} para capturar qualquer letra (incluindo acentuadas)
+      const pattern1 = /([\p{L}]+(?:-[\p{L}]+)?)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/giu;
       let match;
       while ((match = pattern1.exec(command)) !== null) {
-        gastos.push({
-          tipo: match[1],
-          valor: parseFloat(match[2].replace(/\./g, '').replace(',', '.'))
-        });
-      }
-
-      // Padrão 2: [TIPO] [VALOR] SEM r$ (ex: "motor 200 câmbio 300")
-      const pattern2 = /(câmbio|cambio|motor|pneu|pneus|documentação|documentacao|pintura|mecânica|mecanica|elétrica|eletrica|manutenção|manutencao|peça|peca|serviço|servico)\s+(\d+)/gi;
-      while ((match = pattern2.exec(command)) !== null) {
-        // Evitar duplicatas
-        const jaExiste = gastos.some(g => g.tipo.toLowerCase() === match[1].toLowerCase());
-        if (!jaExiste) {
+        const tipo = match[1].toLowerCase();
+        if (!palavrasIgnoradas.includes(tipo)) {
           gastos.push({
             tipo: match[1],
-            valor: parseFloat(match[2])
+            valor: parseFloat(match[2].replace(/\./g, '').replace(',', '.'))
           });
         }
       }
 
-      // Padrão 3: [VALOR] em [TIPO] (ex: "200 em câmbio")
-      if (gastos.length === 0) {
-        const pattern3 = /(\d+)\s+(?:em|para|no|na)\s+(câmbio|cambio|motor|pneu|pneus|documentação|documentacao|pintura|mecânica|mecanica|elétrica|eletrica|manutenção|manutencao|peça|peca|serviço|servico)/gi;
-        while ((match = pattern3.exec(command)) !== null) {
-          gastos.push({
-            tipo: match[2],
-            valor: parseFloat(match[1])
-          });
+      // Padrão 2: [TIPO] [VALOR] SEM r$ (ex: "motor 200 câmbio 300 roda 800 volante 150")
+      // Captura QUALQUER palavra seguida de número (2+ dígitos para pegar valores menores)
+      const pattern2 = /([\p{L}]+(?:-[\p{L}]+)?)\s+(\d{2,})/giu;
+      while ((match = pattern2.exec(command)) !== null) {
+        const tipo = match[1].toLowerCase();
+        const valor = parseInt(match[2]);
+        const posicao = match.index;
+        
+        // Verificar se está IMEDIATAMENTE após "placa" (nas últimas 15 posições)
+        const textoAntes = command.substring(Math.max(0, posicao - 15), posicao);
+        const logoAposPlaca = /placa\s+[\w\d]{0,6}$/i.test(textoAntes);
+        
+        // Ignorar palavras de comando, valores muito grandes ou se está imediatamente após "placa"
+        if (!palavrasIgnoradas.includes(tipo) && valor >= 10 && valor <= 99999 && !logoAposPlaca) {
+          // Evitar duplicatas
+          const jaExiste = gastos.some(g => g.tipo.toLowerCase() === tipo);
+          if (!jaExiste) {
+            gastos.push({
+              tipo: match[1],
+              valor: parseFloat(match[2])
+            });
+          }
+        }
+      }
+
+      // Padrão 3: [VALOR] em [TIPO] (ex: "200 em câmbio", "500 na turbina")
+      const pattern3 = /(\d+)\s+(?:em|para|no|na)\s+([\p{L}]+(?:-[\p{L}]+)?)/giu;
+      while ((match = pattern3.exec(command)) !== null) {
+        const tipo = match[2].toLowerCase();
+        if (!palavrasIgnoradas.includes(tipo)) {
+          // Evitar duplicatas
+          const jaExiste = gastos.some(g => g.tipo.toLowerCase() === tipo);
+          if (!jaExiste) {
+            gastos.push({
+              tipo: match[2],
+              valor: parseFloat(match[1])
+            });
+          }
         }
       }
 
