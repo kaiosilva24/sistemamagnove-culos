@@ -32,7 +32,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Detectar tipo de comando
-    const isGastoCommand = /adicionar\s+gasto|gasto\s+de|gasto\s+no/i.test(command);
+    // Gasto: "adicionar gasto", "gasto na placa", "gastei", "gasto de", etc
+    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+na\s+placa|placa\s+\w+.*r\$/i.test(command);
     const isVeiculoCommand = /adicionar\s+veículo|veículo\s+marca|cadastrar\s+veículo/i.test(command) || 
                              /marca\s+\w+\s+modelo/i.test(command);
 
