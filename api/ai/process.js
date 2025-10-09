@@ -193,12 +193,12 @@ module.exports = async function handler(req, res) {
     // ==================== PROCESSAR VEÍCULOS ====================
     // Extrair informações do comando com regex
     const marcaMatch = command.match(/marca\s+(\w+)/i);
-    const modeloMatch = command.match(/modelo\s+(\w+)/i);
+    const modeloMatch = command.match(/modelo\s+([\w\s]+?)(?:\s+ano|\s+placa|\s+valor|\s+km|\s+cor|$)/i);
     const anoMatch = command.match(/ano\s+(\d{4})/i);
     const valorMatch = command.match(/valor\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i) || 
-                       command.match(/(\d+(?:\.\d{3})*(?:,\d{2})?)/);
-    const placaMatch = command.match(/placa\s+([\w\d]+)/i);
-    const kmMatch = command.match(/(?:km|quilometragem)\s+(\d+(?:\.\d{3})*)/i);
+                       command.match(/(?:por|de)\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i);
+    const placaMatch = command.match(/placa\s+([\w\d\-]+)/i);
+    const kmMatch = command.match(/(?:km|quilometragem|quilômetros?)\s+(\d+(?:\.\d{3})*)/i);
     const corMatch = command.match(/cor\s+(\w+)/i);
 
     // Verificar se temos os dados mínimos para veículo
