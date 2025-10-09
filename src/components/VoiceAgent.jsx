@@ -49,28 +49,42 @@ const VoiceAgent = () => {
       })
       .catch(err => console.error('Erro ao buscar status de IAs:', err));
 
-    // Carrega preferência de IA salva (pode dar 401 se não estiver logado, é normal)
+    // Carrega preferência de IA - PRIMEIRO do localStorage (sempre disponível)
+    const savedAI = localStorage.getItem('preferred_ai');
+    if (savedAI) {
+      console.log('✅ Preferência de IA carregada do localStorage:', savedAI);
+      setSelectedAI(savedAI);
+    }
+
+    // DEPOIS tenta buscar da API (pode sobrescrever se estiver logado)
     fetch('/api/preferences/preferred_ai')
       .then(res => res.json())
       .then(data => {
         if (data.value) {
-          console.log('✅ Preferência de IA carregada:', data.value);
+          console.log('✅ Preferência de IA carregada da API:', data.value);
           setSelectedAI(data.value);
+          // Sincroniza com localStorage
+          localStorage.setItem('preferred_ai', data.value);
         }
       })
-      .catch(err => console.log('⚠️ Preferência não carregada (normal se não estiver logado)'));
+      .catch(err => console.log('⚠️ Preferência não carregada da API (usando localStorage)'));
   }, []);
 
-  // Salva preferência quando muda
+  // Salva preferência quando muda (em localStorage E na API)
   useEffect(() => {
+    // SEMPRE salva no localStorage (funciona mesmo sem login)
+    localStorage.setItem('preferred_ai', selectedAI);
+    console.log('💾 Preferência de IA salva no localStorage:', selectedAI);
+
+    // TAMBÉM tenta salvar na API (se estiver logado)
     if (selectedAI !== 'auto') {
       fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'preferred_ai', value: selectedAI })
       })
-        .then(() => console.log('💾 Preferência de IA salva:', selectedAI))
-        .catch(err => console.error('Erro ao salvar preferência:', err));
+        .then(() => console.log('💾 Preferência de IA salva na API:', selectedAI))
+        .catch(err => console.log('⚠️ Não foi possível salvar na API (sem autenticação), mas já está salvo localmente'));
     }
   }, [selectedAI]);
 
