@@ -7,23 +7,36 @@ const API_URL = import.meta.env.VITE_API_URL || (
     : 'http://localhost:3000/api'
 );
 
-// Função auxiliar para obter o token de autenticação
+// Função auxiliar para obter o token de autenticação - COM RETRY
 async function getAuthToken() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('❌ Erro ao obter sessão:', error);
-      return null;
+    // Tentar até 3 vezes com delay
+    for (let i = 0; i < 3; i++) {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ Erro ao obter sessão:', error);
+        if (i < 2) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+        return null;
+      }
+      
+      if (session && session.access_token) {
+        console.log('✅ Token obtido na tentativa', i + 1);
+        console.log('✅ Token:', session.access_token.substring(0, 20) + '...');
+        return session.access_token;
+      }
+      
+      if (i < 2) {
+        console.warn('⚠️ Sessão vazia, tentando novamente em 100ms...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
     
-    if (!session) {
-      console.warn('⚠️ Nenhuma sessão encontrada');
-      return null;
-    }
-    
-    console.log('✅ Token obtido:', session.access_token?.substring(0, 20) + '...');
-    return session.access_token;
+    console.error('❌ Nenhuma sessão encontrada após 3 tentativas');
+    return null;
   } catch (error) {
     console.error('❌ Exceção ao obter token:', error);
     return null;
