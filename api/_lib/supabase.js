@@ -39,9 +39,14 @@ async function requireAuth(req, res, handler) {
   const user = await getUserFromRequest(req);
   
   if (!user) {
+    console.log('❌ Autenticação falhou:', {
+      hasAuth: !!req.headers.authorization,
+      authHeader: req.headers.authorization?.substring(0, 20) + '...'
+    });
     return res.status(401).json({ error: 'Não autorizado' });
   }
   
+  console.log('✅ Usuário autenticado:', user.id);
   req.user = user;
   return handler(req, res);
 }
