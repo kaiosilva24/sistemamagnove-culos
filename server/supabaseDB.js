@@ -411,22 +411,19 @@ class SupabaseDB {
 
       const totalGastos = gastos ? gastos.reduce((sum, g) => sum + parseFloat(g.valor || 0), 0) : 0;
 
+      const veiculosVendidos = veiculos.filter(v => v.status === 'vendido');
+      const totalInvestidoVendidos = veiculosVendidos.reduce((sum, v) => sum + parseFloat(v.preco_compra || 0), 0);
+      const totalVendas = veiculosVendidos.reduce((sum, v) => sum + parseFloat(v.preco_venda || 0), 0);
+      
       const stats = {
         total_veiculos: veiculos.length,
         em_estoque: veiculos.filter(v => v.status === 'estoque').length,
-        vendidos: veiculos.filter(v => v.status === 'vendido').length,
+        vendidos: veiculosVendidos.length,
         total_investido: veiculos.reduce((sum, v) => sum + parseFloat(v.preco_compra || 0), 0),
-        total_vendas: veiculos
-          .filter(v => v.status === 'vendido')
-          .reduce((sum, v) => sum + parseFloat(v.preco_venda || 0), 0),
+        total_vendas: totalVendas,
         total_gastos: totalGastos,
-        lucro_total: 0
+        lucro_liquido: totalVendas - totalInvestidoVendidos - totalGastos
       };
-
-      stats.lucro_total = stats.total_vendas - 
-        veiculos
-          .filter(v => v.status === 'vendido')
-          .reduce((sum, v) => sum + parseFloat(v.preco_compra || 0), 0);
 
       return stats;
     } catch (error) {

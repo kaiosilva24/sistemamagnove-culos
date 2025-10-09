@@ -49,13 +49,13 @@ module.exports = async function handler(req, res) {
       const lucroLiquido = totalVendas - totalInvestido - totalGastos;
 
       const stats = {
-        total,
-        estoque,
-        vendidos,
-        totalInvestido,
-        totalVendas,
-        totalGastos,
-        lucroLiquido,
+        total_veiculos: total,
+        em_estoque: estoque,
+        vendidos: vendidos,
+        total_investido: totalInvestido,
+        total_vendas: totalVendas,
+        total_gastos: totalGastos,
+        lucro_liquido: lucroLiquido,
         veiculos
       };
 
