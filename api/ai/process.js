@@ -81,10 +81,13 @@ module.exports = async function handler(req, res) {
       }
 
       // NOVO: Extrair MÚLTIPLOS gastos do comando
-      // Padrão: "câmbio r$ 200 documentação r$ 1000" ou "gasto de 200 em câmbio e 1000 em documentação"
+      // Padrão: "câmbio r$ 200 documentação r$ 1000" ou "motor 200 câmbio 300"
       const gastos = [];
+      const tiposValidos = ['câmbio', 'cambio', 'motor', 'pneu', 'pneus', 'documentação', 'documentacao', 
+                            'pintura', 'mecânica', 'mecanica', 'elétrica', 'eletrica', 'manutenção', 
+                            'manutencao', 'peça', 'peca', 'serviço', 'servico'];
       
-      // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200 documentação r$ 1000")
+      // Padrão 1: [TIPO] r$ [VALOR] (ex: "câmbio r$ 200")
       const pattern1 = /(\w+)\s+r\$\s*(\d+(?:\.\d{3})*(?:,\d{2})?)/gi;
       let match;
       while ((match = pattern1.exec(command)) !== null) {
@@ -94,13 +97,26 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Padrão 2: gasto de [VALOR] em [TIPO] (ex: "gasto de 200 em câmbio")
+      // Padrão 2: [TIPO] [VALOR] SEM r$ (ex: "motor 200 câmbio 300")
+      const pattern2 = /(câmbio|cambio|motor|pneu|pneus|documentação|documentacao|pintura|mecânica|mecanica|elétrica|eletrica|manutenção|manutencao|peça|peca|serviço|servico)\s+(\d+)/gi;
+      while ((match = pattern2.exec(command)) !== null) {
+        // Evitar duplicatas
+        const jaExiste = gastos.some(g => g.tipo.toLowerCase() === match[1].toLowerCase());
+        if (!jaExiste) {
+          gastos.push({
+            tipo: match[1],
+            valor: parseFloat(match[2])
+          });
+        }
+      }
+
+      // Padrão 3: [VALOR] em [TIPO] (ex: "200 em câmbio")
       if (gastos.length === 0) {
-        const pattern2 = /(?:gasto\s+de|valor\s+de)?\s*(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)\s+(?:reais?\s+)?(?:em|para|no|na)?\s*(\w+)/gi;
-        while ((match = pattern2.exec(command)) !== null) {
+        const pattern3 = /(\d+)\s+(?:em|para|no|na)\s+(câmbio|cambio|motor|pneu|pneus|documentação|documentacao|pintura|mecânica|mecanica|elétrica|eletrica|manutenção|manutencao|peça|peca|serviço|servico)/gi;
+        while ((match = pattern3.exec(command)) !== null) {
           gastos.push({
             tipo: match[2],
-            valor: parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
+            valor: parseFloat(match[1])
           });
         }
       }
