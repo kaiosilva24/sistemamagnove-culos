@@ -137,7 +137,7 @@ module.exports = async function handler(req, res) {
         vehicle_id: veiculo.id,
         tipo: g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1),
         valor: g.valor,
-        descricao: `Gasto registrado por voz`,
+        descricao: `${g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1)} - R$ ${g.valor.toFixed(2).replace('.', ',')} (registrado por voz)`,
         data: new Date().toISOString().split('T')[0]
       }));
 
