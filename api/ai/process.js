@@ -45,21 +45,43 @@ module.exports = async function handler(req, res) {
     if (isGastoCommand) {
       console.log('💰 Comando de gasto detectado');
 
-      // Buscar placa primeiro
-      const placaMatch = command.match(/placa\s+([\w\d]+)/i) || 
-                         command.match(/veículo\s+(?:\w+\s+)?placa\s+([\w\d]+)/i);
+      // Buscar placa primeiro (aceita espaços: "abcd 1010")
+      const placaMatch = command.match(/placa\s+(?:do\s+veículo\s+)?([\w\d\s\-]+?)(?:\s+câmbio|\s+motor|\s+pneu|\s+roda|\s+documentação|\s+pintura|\s+mecânica|\s+elétrica|\s+manutenção|\s+peça|\s+serviço|$)/i);
       const modeloMatch = command.match(/veículo\s+(\w+)(?:\s+placa)?/i);
 
       // Buscar veículo
       let veiculo = null;
       if (placaMatch) {
-        const { data } = await supabase
+        // Normalizar placa: remover espaços e converter para uppercase
+        const placaNormalizada = placaMatch[1].replace(/\s+/g, '').toUpperCase();
+        console.log('🔍 Buscando placa normalizada:', placaNormalizada);
+        
+        // Buscar todos os veículos do usuário
+        const { data: veiculos } = await supabase
           .from('veiculos')
           .select('*')
-          .eq('user_id', user.id)
-          .ilike('placa', `%${placaMatch[1]}%`)
-          .single();
-        veiculo = data;
+          .eq('user_id', user.id);
+        
+        // Encontrar veículo com placa similar (pelo menos 60% de match)
+        veiculo = veiculos?.find(v => {
+          if (!v.placa) return false;
+          const placaDB = v.placa.replace(/\s+/g, '').toUpperCase();
+          
+          // Similaridade simples: contar caracteres iguais
+          const minLen = Math.min(placaNormalizada.length, placaDB.length);
+          const maxLen = Math.max(placaNormalizada.length, placaDB.length);
+          
+          let matches = 0;
+          for (let i = 0; i < minLen; i++) {
+            if (placaNormalizada[i] === placaDB[i]) matches++;
+          }
+          
+          const similarity = matches / maxLen;
+          console.log(`   Comparando "${placaNormalizada}" com "${placaDB}": ${(similarity * 100).toFixed(0)}%`);
+          
+          return similarity >= 0.6; // 60% de similaridade
+        });
+        
       } else if (modeloMatch) {
         const { data } = await supabase
           .from('veiculos')
