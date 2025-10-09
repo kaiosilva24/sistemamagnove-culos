@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Sistema de gestão de compra e venda de veículos",
   "main": "server/index.js",
-  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node server/index.supabase.js",

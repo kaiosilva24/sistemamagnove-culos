@@ -19,7 +19,6 @@ module.exports = async function handler(req, res) {
     try {
       switch (method) {
         case 'GET':
-          // Buscar veículo por ID
           const { data: veiculo, error: getError } = await supabase
             .from('veiculos')
             .select('*')
@@ -34,7 +33,6 @@ module.exports = async function handler(req, res) {
           return res.status(200).json(veiculo);
 
         case 'PUT':
-          // Atualizar veículo
           const { data: veiculoAtualizado, error: putError } = await supabase
             .from('veiculos')
             .update(req.body)
@@ -47,7 +45,6 @@ module.exports = async function handler(req, res) {
           return res.status(200).json(veiculoAtualizado);
 
         case 'DELETE':
-          // Deletar veículo
           const { error: deleteError } = await supabase
             .from('veiculos')
             .delete()
