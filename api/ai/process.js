@@ -191,15 +191,16 @@ module.exports = async function handler(req, res) {
     }
 
     // ==================== PROCESSAR VEÍCULOS ====================
-    // Extrair informações do comando com regex
-    const marcaMatch = command.match(/marca\s+(\w+)/i);
-    const modeloMatch = command.match(/modelo\s+([\w\s]+?)(?:\s+ano|\s+placa|\s+valor|\s+km|\s+cor|$)/i);
+    // Extrair informações do comando com regex (aceita variações: "marca X", "da marca X")
+    const marcaMatch = command.match(/(?:da\s+)?marca\s+(\w+)/i);
+    const modeloMatch = command.match(/(?:do\s+)?modelo\s+([\w\s]+?)(?:\s+ano|\s+placa|\s+valor|\s+km|\s+quilometragem|\s+cor|$)/i);
     const anoMatch = command.match(/ano\s+(\d{4})/i);
     const valorMatch = command.match(/valor\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i) || 
                        command.match(/(?:por|de)\s+(?:r\$\s*)?(\d+(?:\.\d{3})*(?:,\d{2})?)/i);
-    // Placa: aceita "ABC1234", "ABC-1234", "ABC 1234"
-    const placaMatch = command.match(/placa\s+([\w\d\-\s]+?)(?:\s+km|\s+valor|\s+cor|\s+ano|$)/i);
-    const kmMatch = command.match(/(?:km|quilometragem|quilômetros?)\s+(\d+(?:\.\d{3})*)/i);
+    // Placa: aceita "ABC1234", "ABC-1234", "ABC 1234", "ABCD 2030"
+    const placaMatch = command.match(/placa\s+([\w\d\-\s]+?)(?:\s+km|\s+quilometragem|\s+valor|\s+cor|\s+ano|$)/i);
+    // KM: aceita "20.000", "20000", "20 .000" (pontos, espaços)
+    const kmMatch = command.match(/(?:km|quilometragem|quilômetros?)\s+([\d\.\s]+)/i);
     const corMatch = command.match(/cor\s+(\w+)/i);
 
     // Verificar se temos os dados mínimos para veículo
@@ -216,12 +217,12 @@ module.exports = async function handler(req, res) {
     const veiculoData = {
       user_id: user.id,
       marca: marcaMatch[1],
-      modelo: modeloMatch[1],
+      modelo: modeloMatch[1].trim(),
       ano: anoMatch ? parseInt(anoMatch[1]) : new Date().getFullYear(),
       preco_compra: valorMatch ? parseFloat(valorMatch[1].replace(/\./g, '').replace(',', '.')) : 0,
       data_compra: new Date().toISOString().split('T')[0],
-      placa: placaMatch ? placaMatch[1].toUpperCase() : null,
-      km: kmMatch ? parseInt(kmMatch[1].replace(/\./g, '')) : null,
+      placa: placaMatch ? placaMatch[1].replace(/\s+/g, '').toUpperCase() : null,
+      km: kmMatch ? parseInt(kmMatch[1].replace(/[\.\s]/g, '')) : null,
       cor: corMatch ? corMatch[1] : null,
       status: 'estoque',
       observacoes: 'Cadastrado por comando de voz'
