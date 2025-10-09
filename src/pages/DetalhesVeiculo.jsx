@@ -251,7 +251,7 @@ function DetalhesVeiculo() {
                       if (confirm('Deseja deletar este gasto?')) {
                         try {
                           const { data: { session } } = await supabase.auth.getSession();
-                          const response = await fetch(`/api/gastos/${gasto.id}`, { 
+                          const response = await fetch(`/api/veiculos/${id}/gastos/${gasto.id}`, { 
                             method: 'DELETE',
                             headers: {
                               'Authorization': `Bearer ${session?.access_token}`
