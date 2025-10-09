@@ -27,8 +27,13 @@ module.exports = async function handler(req, res) {
       success: true,
       message: `Comando recebido: ${command}`,
       action: 'processed',
-      preferredAI: preferredAI || 'local',
-      sessionId: sessionId || Date.now().toString()
+      aiUsed: preferredAI || 'local',
+      response: `Comando processado com sucesso: ${command}`,
+      confidence: 0.95,
+      sessionId: sessionId || Date.now().toString(),
+      data: {
+        command: command
+      }
     };
 
     return res.status(200).json(response);
