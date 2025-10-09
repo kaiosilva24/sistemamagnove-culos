@@ -9,8 +9,25 @@ const API_URL = import.meta.env.VITE_API_URL || (
 
 // Função auxiliar para obter o token de autenticação
 async function getAuthToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token;
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('❌ Erro ao obter sessão:', error);
+      return null;
+    }
+    
+    if (!session) {
+      console.warn('⚠️ Nenhuma sessão encontrada');
+      return null;
+    }
+    
+    console.log('✅ Token obtido:', session.access_token?.substring(0, 20) + '...');
+    return session.access_token;
+  } catch (error) {
+    console.error('❌ Exceção ao obter token:', error);
+    return null;
+  }
 }
 
 // Função auxiliar para fazer requisições autenticadas
@@ -24,6 +41,9 @@ async function authenticatedFetch(url, options = {}) {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('🔑 Enviando requisição autenticada para:', url);
+  } else {
+    console.warn('⚠️ Requisição SEM token para:', url);
   }
 
   const response = await fetch(url, {
@@ -32,6 +52,7 @@ async function authenticatedFetch(url, options = {}) {
   });
 
   if (!response.ok) {
+    console.error('❌ Erro na requisição:', response.status, url);
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
     throw new Error(error.error || `Erro na requisição: ${response.status}`);
   }
