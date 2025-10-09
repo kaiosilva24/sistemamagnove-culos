@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, Car, ShoppingCart, Wrench } from 'lucide-react';
+import { dashboardAPI } from '../lib/api';
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -11,11 +12,12 @@ function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const response = await fetch('/api/dashboard');
-      const data = await response.json();
+      console.log('📊 Carregando dashboard com autenticação...');
+      const data = await dashboardAPI.getStats();
+      console.log('✅ Dashboard carregado:', data);
       setStats(data);
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
+      console.error('❌ Erro ao carregar dashboard:', error);
     } finally {
       setLoading(false);
     }

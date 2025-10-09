@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Trash2, Search, Calendar, DollarSign } from 'lucide-react';
+import { veiculosAPI } from '../lib/api';
 
 function Veiculos() {
   const [veiculos, setVeiculos] = useState([]);
@@ -15,11 +16,12 @@ function Veiculos() {
 
   const fetchVeiculos = async () => {
     try {
-      const response = await fetch('/api/veiculos');
-      const data = await response.json();
+      console.log('🔄 Carregando veículos com autenticação...');
+      const data = await veiculosAPI.getAll();
+      console.log('✅ Veículos carregados:', data);
       setVeiculos(data);
     } catch (error) {
-      console.error('Erro ao carregar veículos:', error);
+      console.error('❌ Erro ao carregar veículos:', error);
     } finally {
       setLoading(false);
     }
@@ -29,10 +31,12 @@ function Veiculos() {
     if (!confirm('Tem certeza que deseja deletar este veículo?')) return;
     
     try {
-      await fetch(`/api/veiculos/${id}`, { method: 'DELETE' });
+      console.log('🗑️ Deletando veículo:', id);
+      await veiculosAPI.delete(id);
+      console.log('✅ Veículo deletado');
       fetchVeiculos();
     } catch (error) {
-      console.error('Erro ao deletar veículo:', error);
+      console.error('❌ Erro ao deletar veículo:', error);
     }
   };
 

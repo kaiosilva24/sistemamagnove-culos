@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft } from 'lucide-react';
+import { veiculosAPI } from '../lib/api';
 
 function NovoVeiculo() {
   const navigate = useNavigate();
@@ -28,26 +29,19 @@ function NovoVeiculo() {
     e.preventDefault();
     
     try {
-      const response = await fetch('/api/veiculos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...formData,
-          preco_compra: parseFloat(formData.preco_compra),
-          ano: parseInt(formData.ano),
-          km: formData.km ? parseInt(formData.km) : null
-        })
+      console.log('➕ Criando veículo com autenticação...');
+      const veiculo = await veiculosAPI.create({
+        ...formData,
+        preco_compra: parseFloat(formData.preco_compra),
+        ano: parseInt(formData.ano),
+        km: formData.km ? parseInt(formData.km) : null
       });
 
-      if (response.ok) {
-        const veiculo = await response.json();
-        alert('Veículo cadastrado com sucesso!');
-        navigate(`/veiculos/${veiculo.id}`);
-      }
+      console.log('✅ Veículo criado:', veiculo);
+      alert('Veículo cadastrado com sucesso!');
+      navigate(`/veiculos/${veiculo.id}`);
     } catch (error) {
-      console.error('Erro ao cadastrar veículo:', error);
+      console.error('❌ Erro ao cadastrar veículo:', error);
       alert('Erro ao cadastrar veículo');
     }
   };
