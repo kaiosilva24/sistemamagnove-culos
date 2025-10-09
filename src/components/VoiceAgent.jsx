@@ -38,10 +38,14 @@ const VoiceAgent = () => {
     aiAPI.getStatus()
       .then(data => {
         console.log('📊 Status completo da API:', JSON.stringify(data, null, 2));
-        console.log('   Gemini:', data.available?.gemini);
-        console.log('   Groq:', data.available?.groq);
-        console.log('   Local:', data.available?.local);
-        setAvailableAIs(data.available);
+        console.log('   Gemini:', data.gemini);
+        console.log('   Groq:', data.groq);
+        console.log('   Local:', data.local);
+        setAvailableAIs({
+          gemini: data.gemini,
+          groq: data.groq,
+          local: data.local
+        });
       })
       .catch(err => console.error('Erro ao buscar status de IAs:', err));
 
