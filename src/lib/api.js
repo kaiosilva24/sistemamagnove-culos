@@ -1,6 +1,11 @@
 import { supabase } from './supabase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// No Vercel, usa rotas relativas. Em dev local, usa localhost
+const API_URL = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+    ? '/api'
+    : 'http://localhost:3000/api'
+);
 
 // Função auxiliar para obter o token de autenticação
 async function getAuthToken() {

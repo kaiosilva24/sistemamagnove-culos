@@ -1,4 +1,8 @@
-# 🚀 Deploy no Vercel - Sistema MAGNO
+# 🚀 Deploy COMPLETO no Vercel - Sistema MAGNO
+
+## ✅ Backend + Frontend no Vercel (Tudo em Um!)
+
+O sistema agora usa **Serverless Functions** do Vercel. Frontend e Backend hospedados juntos!
 
 ## ⚡ Passo a Passo Completo
 
@@ -31,6 +35,7 @@ Antes de fazer deploy, **você DEVE configurar as variáveis de ambiente**:
 1. Na página de configuração do projeto, vá em **"Environment Variables"**
 2. Adicione as seguintes variáveis **EXATAMENTE com esses nomes**:
 
+**Para o Frontend (começam com VITE_):**
 ```
 VITE_SUPABASE_URL
 ```
@@ -40,6 +45,17 @@ VITE_SUPABASE_URL
 VITE_SUPABASE_KEY
 ```
 **Valor:** Sua chave anon/public do Supabase
+
+**Para o Backend (Serverless Functions):**
+```
+SUPABASE_URL
+```
+**Valor:** Sua URL do Supabase (mesma do frontend)
+
+```
+SUPABASE_KEY
+```
+**Valor:** Sua chave anon/public do Supabase (mesma do frontend)
 
 ```
 GEMINI_API_KEY
@@ -51,8 +67,14 @@ GROQ_API_KEY
 ```
 **Valor:** Sua chave da API do Groq (opcional, para IA)
 
+```
+NODE_ENV
+```
+**Valor:** `production`
+
 #### ⚠️ MUITO IMPORTANTE:
-- As variáveis **DEVEM** começar com `VITE_` para o frontend (React/Vite)
+- Variáveis com `VITE_` são para o frontend
+- Variáveis **sem** `VITE_` são para o backend (Serverless Functions)
 - Use a chave **anon/public** do Supabase (NÃO use a service_role)
 - Aplique para: **Production, Preview, e Development**
 
