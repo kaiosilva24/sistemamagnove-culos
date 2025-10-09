@@ -249,9 +249,24 @@ function DetalhesVeiculo() {
                   <button
                     onClick={async () => {
                       if (confirm('Deseja deletar este gasto?')) {
-                        await fetch(`/api/gastos/${gasto.id}`, { method: 'DELETE' });
-                        fetchGastos();
-                        fetchVeiculo();
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          const response = await fetch(`/api/gastos/${gasto.id}`, { 
+                            method: 'DELETE',
+                            headers: {
+                              'Authorization': `Bearer ${session?.access_token}`
+                            }
+                          });
+                          if (response.ok) {
+                            fetchGastos();
+                            fetchVeiculo();
+                          } else {
+                            alert('Erro ao deletar gasto');
+                          }
+                        } catch (error) {
+                          console.error('Erro ao deletar:', error);
+                          alert('Erro ao deletar gasto');
+                        }
                       }
                     }}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
