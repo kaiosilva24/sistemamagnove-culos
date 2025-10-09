@@ -32,8 +32,12 @@ module.exports = async function handler(req, res) {
     }
 
     // Detectar tipo de comando
-    // Gasto: "adicionar gasto", "gasto na placa", "gastei", "gasto de", etc
-    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+na\s+placa|placa\s+\w+.*r\$/i.test(command);
+    // Gasto: "adicionar gasto", "gasto na placa", "gastei", "largar gasto", etc
+    // Se tiver "placa [XXX]" + valores numéricos + tipos de gasto, é gasto
+    const hasPlacaAndValues = /placa\s+\w+.*(câmbio|motor|pneu|documentação|pintura|mecânica|elétrica|manutenção|peça|serviço)/i.test(command) 
+                              && /\d{2,}/i.test(command);
+    const isGastoCommand = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+na\s+placa|largas?s?e|coloca.*gasto/i.test(command) 
+                           || hasPlacaAndValues;
     const isVeiculoCommand = /adicionar\s+veículo|veículo\s+marca|cadastrar\s+veículo/i.test(command) || 
                              /marca\s+\w+\s+modelo/i.test(command);
 
