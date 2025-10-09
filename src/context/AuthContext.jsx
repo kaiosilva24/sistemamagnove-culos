@@ -18,16 +18,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Verificar sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔐 Sessão inicial:', session ? '✅ Logado' : '❌ Não logado');
-      console.log('👤 Usuário:', session?.user?.email);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Escutar mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth mudou:', event, session ? '✅ Logado' : '❌ Deslogado');
-      console.log('👤 Usuário:', session?.user?.email);
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -37,19 +33,15 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     try {
-      console.log('🔑 Tentando login...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
-        console.error('❌ Erro no login:', error.message);
         throw error;
       }
       
-      console.log('✅ Login bem-sucedido!', data.user?.email);
-      console.log('🔐 Token:', data.session?.access_token?.substring(0, 20) + '...');
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
