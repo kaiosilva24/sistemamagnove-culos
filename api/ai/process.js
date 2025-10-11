@@ -213,14 +213,64 @@ module.exports = async function handler(req, res) {
 
       console.log('💾 Salvando', gastos.length, 'gasto(s):', gastos);
 
+      // Função para categorizar o tipo do gasto
+      const categorizarTipo = (textoGasto) => {
+        const texto = textoGasto.toLowerCase();
+        
+        // Peças
+        if (texto.includes('peça') || texto.includes('peca') || 
+            texto.includes('correia') || texto.includes('amortecedor') || 
+            texto.includes('bico') || texto.includes('filtro') || 
+            texto.includes('vela') || texto.includes('pastilha') || 
+            texto.includes('disco') || texto.includes('óleo') || texto.includes('oleo') ||
+            texto.includes('pneu') || texto.includes('bateria') || 
+            texto.includes('lâmpada') || texto.includes('lampada')) {
+          return 'Peça';
+        }
+        
+        // Manutenção
+        if (texto.includes('manutenção') || texto.includes('manutencao') || 
+            texto.includes('conserto') || texto.includes('reparo') || 
+            texto.includes('motor') || texto.includes('câmbio') || texto.includes('cambio') ||
+            texto.includes('transmissão') || texto.includes('transmissao') ||
+            texto.includes('suspensão') || texto.includes('suspensao') ||
+            texto.includes('freio') || texto.includes('embreagem')) {
+          return 'Manutenção';
+        }
+        
+        // Documentação
+        if (texto.includes('documentação') || texto.includes('documentacao') || 
+            texto.includes('documento') || texto.includes('licenciamento') || 
+            texto.includes('ipva') || texto.includes('multa') || 
+            texto.includes('seguro') || texto.includes('despachante')) {
+          return 'Documentação';
+        }
+        
+        // Estética
+        if (texto.includes('pintura') || texto.includes('funilaria') || 
+            texto.includes('polimento') || texto.includes('lavagem') || 
+            texto.includes('estética') || texto.includes('estetica') ||
+            texto.includes('detalhamento') || texto.includes('vitrificação')) {
+          return 'Estética';
+        }
+        
+        // Outros
+        return 'Outros';
+      };
+
       // Salvar todos os gastos
-      const gastosData = gastos.map(g => ({
-        vehicle_id: veiculo.id,
-        tipo: g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1),
-        valor: g.valor,
-        descricao: `${g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1)} - R$ ${g.valor.toFixed(2).replace('.', ',')} (registrado por voz)`,
-        data: new Date().toISOString().split('T')[0]
-      }));
+      const gastosData = gastos.map(g => {
+        const itemDescricao = g.tipo.charAt(0).toUpperCase() + g.tipo.slice(1);
+        const tipoCategoria = categorizarTipo(g.tipo);
+        
+        return {
+          vehicle_id: veiculo.id,
+          tipo: tipoCategoria,
+          valor: g.valor,
+          descricao: `${itemDescricao} - R$ ${g.valor.toFixed(2).replace('.', ',')} (registrado por voz)`,
+          data: new Date().toISOString().split('T')[0]
+        };
+      });
 
       const { data: gastosSalvos, error: gastoError } = await supabase
         .from('gastos')
