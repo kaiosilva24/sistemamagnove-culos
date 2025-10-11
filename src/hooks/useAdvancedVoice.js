@@ -64,17 +64,17 @@ export const useAdvancedVoice = () => {
   const extractExpenseData = (text) => {
     const data = {};
     
-    // Categoria
+    // Tipo (anteriormente "categoria")
     if (text.includes('manutenção') || text.includes('manutencao') || text.includes('conserto')) {
-      data.categoria = 'manutenção';
+      data.tipo = 'Manutenção';
     } else if (text.includes('peça') || text.includes('peca') || text.includes('peças')) {
-      data.categoria = 'peças';
+      data.tipo = 'Peça';
     } else if (text.includes('documentação') || text.includes('documentacao') || text.includes('documento')) {
-      data.categoria = 'documentação';
+      data.tipo = 'Documentação';
     } else if (text.includes('pintura') || text.includes('funilaria')) {
-      data.categoria = 'estética';
+      data.tipo = 'Estética';
     } else {
-      data.categoria = 'outros';
+      data.tipo = 'Outros';
     }
     
     // Descrição (pega o que vem antes do valor)

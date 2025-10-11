@@ -284,7 +284,7 @@ const AdvancedVoiceAgent = () => {
 
     const data = {
       descricao: collectedData.descricao || 'Gasto registrado por voz',
-      categoria: collectedData.categoria,
+      tipo: collectedData.tipo || collectedData.categoria || 'Outros',
       valor: collectedData.valor,
       data: new Date().toISOString().split('T')[0]
     };
