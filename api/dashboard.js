@@ -27,13 +27,22 @@ module.exports = async function handler(req, res) {
 
       if (veiculosError) throw veiculosError;
 
-      // Buscar todos os gastos
-      const { data: gastos, error: gastosError } = await supabase
-        .from('gastos')
-        .select('valor, vehicle_id')
-        .in('vehicle_id', veiculos.map(v => v.id));
+      // Buscar todos os gastos - só se houver veículos
+      let gastos = [];
+      if (veiculos && veiculos.length > 0) {
+        const veiculoIds = veiculos.map(v => v.id);
+        const { data: gastosData, error: gastosError } = await supabase
+          .from('gastos')
+          .select('valor, vehicle_id')
+          .in('vehicle_id', veiculoIds);
 
-      if (gastosError) throw gastosError;
+        if (gastosError) {
+          console.error('Erro ao buscar gastos:', gastosError);
+          throw gastosError;
+        }
+        
+        gastos = gastosData || [];
+      }
 
       // Calcular estatísticas
       const total = veiculos.length;
@@ -45,8 +54,21 @@ module.exports = async function handler(req, res) {
         .filter(v => v.status === 'vendido')
         .reduce((sum, v) => sum + (parseFloat(v.preco_venda) || 0), 0);
       
-      const totalGastos = gastos.reduce((sum, g) => sum + (parseFloat(g.valor) || 0), 0);
+      // Calcular total de gastos com log detalhado
+      const totalGastos = gastos.reduce((sum, g) => {
+        const valor = parseFloat(g.valor) || 0;
+        return sum + valor;
+      }, 0);
+      
       const lucroLiquido = totalVendas - totalInvestido - totalGastos;
+
+      // Log para debug
+      console.log('📊 Dashboard Stats:', {
+        veiculos: veiculos.length,
+        gastos: gastos.length,
+        totalGastos: totalGastos,
+        gastosIndividuais: gastos.map(g => ({ vehicle_id: g.vehicle_id, valor: g.valor }))
+      });
 
       const stats = {
         total_veiculos: total,
@@ -56,7 +78,8 @@ module.exports = async function handler(req, res) {
         total_vendas: totalVendas,
         total_gastos: totalGastos,
         lucro_liquido: lucroLiquido,
-        veiculos
+        veiculos,
+        debug_gastos_count: gastos.length
       };
 
       return res.status(200).json(stats);
