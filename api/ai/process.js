@@ -32,14 +32,30 @@ module.exports = async function handler(req, res) {
     }
 
     // Detectar tipo de comando
-    // PRIORIDADE 1: Detectar CADASTRO de veículo (antes de gasto!)
-    const isCadastroCommand = /cadastr(ar|a|o)|adicionar\s+(novo\s+)?ve[ií]culo|novo\s+ve[ií]culo|registrar\s+ve[ií]culo|criar\s+ve[ií]culo/i.test(command) ||
-                              /\b(marca|modelo)\s+\w+/i.test(command);
+    // PRIORIDADE 1: Detectar GASTO (tem que vir ANTES de veículo!)
+    // Se tem "placa" + alguma palavra de gasto/peça, É GASTO
+    const temPlaca = /(?:na|a)?\s*placa/i.test(command);
+    const temGasto = /câmbio|cambio|motor|roda|pneu|óleo|filtro|pastilha|disco|amortecedor|suspensão|embreagem|bateria|farol|correia|turbina|vela|transmissão|documentação|ipva|seguro|r\$\s*\d+|\d+\s*em\s+/i.test(command);
+    const isGastoExplicito = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+(na|no|a|ao)\s+placa|larga.*gasto|coloca.*gasto/i.test(command);
     
-    // PRIORIDADE 2: Detectar GASTO (apenas se NÃO for cadastro)
-    const isGastoExplicito = /adicionar\s+gasto|gasto\s+(de|na|no|em|da|do)|gastei|gastos?\s+(na|no|a|ao)\s+placa|largas?s?e|coloca.*gasto/i.test(command);
-    const isGastoCommand = !isCadastroCommand && isGastoExplicito;
+    const isGastoCommand = isGastoExplicito || (temPlaca && temGasto);
+    
+    // PRIORIDADE 2: Detectar CADASTRO de veículo (apenas se NÃO for gasto)
+    const isCadastroCommand = !isGastoCommand && (
+      /cadastr(ar|a|o)|adicionar\s+(novo\s+)?ve[ií]culo|novo\s+ve[ií]culo|registrar\s+ve[ií]culo|criar\s+ve[ií]culo/i.test(command) ||
+      /\b(marca|modelo)\s+\w+/i.test(command)
+    );
+    
     const isVeiculoCommand = isCadastroCommand;
+    
+    // Debug da detecção
+    console.log('🔍 Detecção de comando:', {
+      temPlaca,
+      temGasto,
+      isGastoExplicito,
+      isGastoCommand,
+      isVeiculoCommand
+    });
 
     // ==================== PROCESSAR GASTOS ====================
     if (isGastoCommand) {
@@ -228,6 +244,7 @@ module.exports = async function handler(req, res) {
         session_id: sessionId || Date.now().toString(),
         command: command,
         action: 'add_gastos',
+        vehicle_id: veiculo.id,
         data: {
           placa: veiculo.placa,
           modelo: veiculo.modelo,
@@ -235,7 +252,8 @@ module.exports = async function handler(req, res) {
         },
         response: `${gastos.length} gasto(s) registrado(s): ${listaGastos}. Total: R$ ${totalGastos.toFixed(2)}`,
         ai_used: 'local',
-        confidence: 0.95
+        confidence: 0.95,
+        success: true
       }]);
 
       return res.status(200).json({
@@ -314,9 +332,11 @@ module.exports = async function handler(req, res) {
       user_id: user.id,
       session_id: sessionId || Date.now().toString(),
       command: command,
+      action: 'create_vehicle',
       response: `Veículo ${veiculoData.marca} ${veiculoData.modelo} ${veiculoData.ano} cadastrado com sucesso!`,
       ai_used: 'local',
-      confidence: 0.95
+      confidence: 0.95,
+      success: true
     }]);
 
     return res.status(200).json({

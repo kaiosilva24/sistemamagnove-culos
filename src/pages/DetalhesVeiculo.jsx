@@ -238,7 +238,7 @@ function DetalhesVeiculo() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
                     <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                      {gasto.categoria}
+                      {gasto.tipo}
                     </span>
                     <h4 className="font-semibold text-gray-900">{gasto.descricao}</h4>
                   </div>
@@ -312,7 +312,7 @@ function DetalhesVeiculo() {
 function ModalGasto({ veiculoId, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     descricao: '',
-    categoria: 'Peça',
+    tipo: 'Peça',
     valor: '',
     data: new Date().toISOString().split('T')[0]
   });
@@ -320,9 +320,13 @@ function ModalGasto({ veiculoId, onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       await fetch(`/api/veiculos/${veiculoId}/gastos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({
           ...formData,
           valor: parseFloat(formData.valor)
@@ -351,10 +355,10 @@ function ModalGasto({ veiculoId, onClose, onSuccess }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
             <select
-              value={formData.categoria}
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+              value={formData.tipo}
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option>Peça</option>
